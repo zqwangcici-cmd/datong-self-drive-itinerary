@@ -1,0 +1,943 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>大同两日自驾旅游攻略</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIINfQdNhb3ff9liT1i8FyrpG8c6x4Z+Yzc=" crossorigin="">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1d2524;
+      --muted: #65706d;
+      --soft: #f5f1e8;
+      --paper: #fbfaf7;
+      --line: #ddd4c4;
+      --green: #2d5c4d;
+      --green-2: #e4eee8;
+      --gold: #b77b2d;
+      --red: #a94a3f;
+      --blue: #446a8c;
+      --shadow: 0 18px 50px rgba(38, 45, 41, 0.10);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 18% 0%, rgba(183, 123, 45, 0.10), transparent 28rem),
+        linear-gradient(180deg, #f8f4ec 0%, var(--paper) 36%, #f6f5f1 100%);
+      line-height: 1.65;
+    }
+
+    a { color: inherit; }
+
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 34px 0 56px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+      gap: 28px;
+      align-items: stretch;
+      min-height: 520px;
+    }
+
+    .hero-copy {
+      padding: 32px 0 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .eyebrow {
+      margin: 0 0 14px;
+      color: var(--green);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(38px, 7vw, 76px);
+      line-height: 1.02;
+      letter-spacing: 0;
+      font-weight: 800;
+    }
+
+    .lead {
+      max-width: 720px;
+      margin: 22px 0 0;
+      color: #39423f;
+      font-size: clamp(17px, 2vw, 22px);
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 26px;
+    }
+
+    .chip {
+      border: 1px solid rgba(45, 92, 77, .25);
+      background: rgba(255, 255, 255, .58);
+      color: var(--green);
+      border-radius: 999px;
+      padding: 8px 13px;
+      font-size: 14px;
+      font-weight: 650;
+    }
+
+    .map-panel {
+      border: 1px solid rgba(45, 92, 77, .18);
+      border-radius: 18px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: var(--shadow);
+      min-height: 500px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #map {
+      min-height: 500px;
+      height: 100%;
+      flex: 1;
+      position: relative;
+      background: linear-gradient(135deg, #edf3ee 0%, #f8f2e6 100%);
+    }
+
+    #leafletMap,
+    #staticMap {
+      position: absolute;
+      inset: 0;
+    }
+
+    #leafletMap {
+      z-index: 2;
+      display: none;
+    }
+
+    #leafletMap.is-ready {
+      display: block;
+    }
+
+    #staticMap {
+      z-index: 1;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      overflow: hidden;
+    }
+
+    .static-map-svg {
+      width: 100%;
+      height: 100%;
+      min-height: 460px;
+      display: block;
+    }
+
+    .static-map-label {
+      font-size: 15px;
+      font-weight: 800;
+      fill: var(--ink);
+      paint-order: stroke;
+      stroke: rgba(255,255,255,.82);
+      stroke-width: 5px;
+      stroke-linejoin: round;
+    }
+
+    .static-map-small {
+      font-size: 12px;
+      font-weight: 650;
+      fill: var(--muted);
+      paint-order: stroke;
+      stroke: rgba(255,255,255,.86);
+      stroke-width: 4px;
+      stroke-linejoin: round;
+    }
+
+    .static-map-note {
+      font-size: 13px;
+      font-weight: 700;
+      fill: var(--green);
+    }
+
+    .route-sat {
+      fill: none;
+      stroke: var(--green);
+      stroke-width: 5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .route-sun {
+      fill: none;
+      stroke: var(--gold);
+      stroke-width: 5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 10 10;
+    }
+
+    .map-dot {
+      fill: var(--green);
+      stroke: #fff;
+      stroke-width: 4;
+    }
+
+    .map-dot.gold {
+      fill: var(--gold);
+    }
+
+    .map-note {
+      padding: 12px 14px;
+      color: var(--muted);
+      font-size: 13px;
+      border-top: 1px solid var(--line);
+      background: rgba(255,255,255,.88);
+    }
+
+    .section {
+      margin-top: 42px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: clamp(25px, 4vw, 38px);
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .section-head p {
+      margin: 0;
+      max-width: 520px;
+      color: var(--muted);
+    }
+
+    .route-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .metric,
+    .card,
+    .timeline-item,
+    .spot-card {
+      background: rgba(255,255,255,.76);
+      border: 1px solid rgba(91, 94, 86, .14);
+      border-radius: 14px;
+      box-shadow: 0 10px 28px rgba(38,45,41,.06);
+    }
+
+    .metric {
+      padding: 16px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 25px;
+      line-height: 1.1;
+      color: var(--green);
+    }
+
+    .metric span {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .drive-table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 14px;
+      background: rgba(255,255,255,.78);
+      box-shadow: 0 10px 28px rgba(38,45,41,.06);
+    }
+
+    .drive-table th,
+    .drive-table td {
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      text-align: left;
+      font-size: 15px;
+    }
+
+    .drive-table th {
+      color: var(--green);
+      background: rgba(228, 238, 232, .76);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .drive-table tr:last-child td { border-bottom: 0; }
+    .drive-table td:nth-child(3),
+    .drive-table td:nth-child(4) { white-space: nowrap; font-weight: 700; }
+
+    .day-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .card {
+      padding: 20px;
+    }
+
+    .day-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 13px;
+      margin-bottom: 6px;
+    }
+
+    .day-title h3 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.2;
+    }
+
+    .tag {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: var(--green-2);
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .timeline-item {
+      padding: 13px 14px;
+      display: grid;
+      grid-template-columns: 92px minmax(0, 1fr);
+      gap: 12px;
+      background: rgba(255,255,255,.58);
+      box-shadow: none;
+    }
+
+    .time {
+      color: var(--gold);
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .timeline-item h4 {
+      margin: 0 0 4px;
+      font-size: 17px;
+      line-height: 1.28;
+    }
+
+    .timeline-item p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .spots {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .spot-card {
+      padding: 18px;
+    }
+
+    .spot-card h3 {
+      margin: 0 0 8px;
+      font-size: 20px;
+      line-height: 1.25;
+    }
+
+    .spot-card p {
+      margin: 0;
+      color: #48514e;
+      font-size: 15px;
+    }
+
+    .stay {
+      display: inline-flex;
+      margin: 14px 0 0;
+      gap: 7px;
+      align-items: center;
+      color: var(--green);
+      background: rgba(228, 238, 232, .72);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 13px;
+      font-weight: 760;
+    }
+
+    .tips {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .tip {
+      padding: 18px;
+      border-top: 3px solid var(--green);
+      background: rgba(255,255,255,.70);
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(38,45,41,.05);
+    }
+
+    .tip h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+    }
+
+    .tip p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .footer {
+      margin-top: 34px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .leaflet-popup-content-wrapper {
+      border-radius: 12px;
+    }
+
+    .popup-title {
+      font-weight: 800;
+      color: var(--green);
+      margin-bottom: 2px;
+    }
+
+    .legend {
+      background: rgba(255,255,255,.92);
+      padding: 9px 10px;
+      border-radius: 10px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.12);
+      color: #25302d;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .legend span {
+      display: inline-block;
+      width: 22px;
+      height: 3px;
+      vertical-align: middle;
+      margin-right: 7px;
+      border-radius: 999px;
+    }
+
+    @media (max-width: 920px) {
+      .hero,
+      .day-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        min-height: 0;
+      }
+
+      .hero-copy {
+        padding-top: 16px;
+      }
+
+      .map-panel,
+      #map {
+        min-height: 430px;
+      }
+
+      .route-grid,
+      .spots,
+      .tips {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        width: min(100% - 22px, 1180px);
+        padding-top: 18px;
+      }
+
+      .hero-copy {
+        padding-bottom: 0;
+      }
+
+      .lead {
+        font-size: 16px;
+      }
+
+      .section-head {
+        display: block;
+      }
+
+      .section-head p {
+        margin-top: 8px;
+      }
+
+      .route-grid,
+      .spots,
+      .tips {
+        grid-template-columns: 1fr;
+      }
+
+      .drive-table,
+      .drive-table tbody,
+      .drive-table tr,
+      .drive-table td {
+        display: block;
+        width: 100%;
+      }
+
+      .drive-table thead {
+        display: none;
+      }
+
+      .drive-table tr {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .drive-table td {
+        border: 0;
+        padding: 4px 0;
+        white-space: normal;
+      }
+
+      .drive-table td::before {
+        content: attr(data-label);
+        display: block;
+        color: var(--green);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .timeline-item {
+        grid-template-columns: 1fr;
+        gap: 5px;
+      }
+
+      .day-title {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .map-panel,
+      #map {
+        min-height: 380px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero" aria-labelledby="title">
+      <div class="hero-copy">
+        <p class="eyebrow">Datong weekend self-drive</p>
+        <h1 id="title">大同两日自驾旅游攻略</h1>
+        <p class="lead">周六看云冈与辽金古建，傍晚把东南邑和古城墙日落串起来；周日去应县木塔，午后从容回大同南站，赶 17:20 高铁返京。</p>
+        <div class="chips" aria-label="行程特点">
+          <span class="chip">自驾友好</span>
+          <span class="chip">不特种兵</span>
+          <span class="chip">核心古建优先</span>
+          <span class="chip">傍晚古城散步</span>
+        </div>
+      </div>
+      <aside class="map-panel" aria-label="大同自驾路线地图">
+        <div id="map">
+          <div id="leafletMap" aria-hidden="true"></div>
+          <div id="staticMap" role="img" aria-label="大同两日自驾路线示意图">
+            <svg class="static-map-svg" viewBox="0 0 720 520" aria-hidden="true">
+              <defs>
+                <marker id="arrowSat" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                  <path d="M0,0 L0,6 L9,3 z" fill="#2d5c4d"></path>
+                </marker>
+                <marker id="arrowSun" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                  <path d="M0,0 L0,6 L9,3 z" fill="#b77b2d"></path>
+                </marker>
+              </defs>
+              <rect x="26" y="26" width="668" height="468" rx="26" fill="rgba(255,255,255,.42)" stroke="rgba(45,92,77,.16)"></rect>
+              <path d="M92 205 C148 160, 218 132, 285 150 C340 164, 374 206, 418 218 C470 232, 522 205, 608 168" fill="none" stroke="rgba(68,106,140,.18)" stroke-width="18" stroke-linecap="round"></path>
+              <path d="M430 228 C405 292, 372 344, 330 412" fill="none" stroke="rgba(68,106,140,.12)" stroke-width="16" stroke-linecap="round"></path>
+              <text x="54" y="58" class="static-map-note">内置路线图：外部地图加载失败时仍可查看</text>
+              <text x="570" y="76" class="static-map-small">大同市区</text>
+              <text x="220" y="462" class="static-map-small">应县方向</text>
+
+              <path class="route-sat" marker-end="url(#arrowSat)" d="M520 182 L132 205 L500 178 L526 206 L560 198 L548 236"></path>
+              <path class="route-sun" marker-end="url(#arrowSun)" d="M520 182 C458 250, 384 318, 318 420 C392 382, 496 326, 622 270"></path>
+
+              <circle class="map-dot" cx="520" cy="182" r="9"></circle>
+              <text x="534" y="178" class="static-map-label">大同古城</text>
+              <text x="534" y="197" class="static-map-small">住宿/晚饭</text>
+
+              <circle class="map-dot" cx="132" cy="205" r="9"></circle>
+              <text x="54" y="190" class="static-map-label">云冈石窟</text>
+              <text x="54" y="210" class="static-map-small">周六上午</text>
+
+              <circle class="map-dot" cx="500" cy="178" r="8"></circle>
+              <text x="444" y="148" class="static-map-label">华严寺</text>
+              <text x="442" y="167" class="static-map-small">1.5-2小时</text>
+
+              <circle class="map-dot" cx="526" cy="206" r="8"></circle>
+              <text x="446" y="230" class="static-map-label">善化寺</text>
+              <text x="443" y="249" class="static-map-small">45-60分钟</text>
+
+              <circle class="map-dot" cx="560" cy="198" r="8"></circle>
+              <text x="578" y="205" class="static-map-label">东南邑</text>
+
+              <circle class="map-dot" cx="548" cy="236" r="8"></circle>
+              <text x="565" y="246" class="static-map-label">古城墙日落</text>
+
+              <circle class="map-dot gold" cx="318" cy="420" r="10"></circle>
+              <text x="242" y="410" class="static-map-label">应县木塔</text>
+              <text x="242" y="430" class="static-map-small">周日上午</text>
+
+              <circle class="map-dot gold" cx="622" cy="270" r="9"></circle>
+              <text x="634" y="266" class="static-map-label">大同南站</text>
+              <text x="634" y="285" class="static-map-small">17:20 高铁</text>
+
+              <line x1="54" y1="482" x2="92" y2="482" class="route-sat"></line>
+              <text x="102" y="487" class="static-map-small">周六路线</text>
+              <line x1="214" y1="482" x2="252" y2="482" class="route-sun"></line>
+              <text x="262" y="487" class="static-map-small">周日路线</text>
+            </svg>
+          </div>
+        </div>
+        <div class="map-note">地图为路线示意，行驶距离与时间按常规路况估算；实际导航请以当天高德、百度或车机路线为准。</div>
+      </aside>
+    </section>
+
+    <section class="section" aria-labelledby="overview-title">
+      <div class="section-head">
+        <h2 id="overview-title">整体节奏</h2>
+        <p>把“大同西侧、古城内部、应县南侧”拆开走，减少折返，也给云冈、华严寺和木塔保留认真看的时间。</p>
+      </div>
+      <div class="route-grid">
+        <div class="metric"><strong>2 天</strong><span>周六整天 + 周日 17:20 高铁</span></div>
+        <div class="metric"><strong>4+2</strong><span>四个核心景点，加入东南邑与古城墙日落</span></div>
+        <div class="metric"><strong>约 190 km</strong><span>两天合计驾驶里程估算</span></div>
+        <div class="metric"><strong>不赶路</strong><span>下午和傍晚以步行为主，减少停车切换</span></div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="drive-title">
+      <div class="section-head">
+        <h2 id="drive-title">自驾段落</h2>
+        <p>古城内尽量停车后步行；周日从应县返程要给还车、加油、验车和进站留足缓冲。</p>
+      </div>
+      <table class="drive-table">
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>自驾段</th>
+            <th>预计时间</th>
+            <th>预计距离</th>
+            <th>备注</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="日期">周六上午</td>
+            <td data-label="自驾段">大同古城/酒店 → 云冈石窟景区停车场</td>
+            <td data-label="预计时间">35-45 分钟</td>
+            <td data-label="预计距离">约 18-22 km</td>
+            <td data-label="备注">建议 8:00 左右出发，争取 9:00 前进入景区。</td>
+          </tr>
+          <tr>
+            <td data-label="日期">周六中午</td>
+            <td data-label="自驾段">云冈石窟 → 华严寺/古城西南侧停车点</td>
+            <td data-label="预计时间">35-50 分钟</td>
+            <td data-label="预计距离">约 19-23 km</td>
+            <td data-label="备注">回古城后尽量一次停车，下午到晚上步行串联。</td>
+          </tr>
+          <tr>
+            <td data-label="日期">周六下午</td>
+            <td data-label="自驾段">华严寺周边 → 善化寺/东南邑周边</td>
+            <td data-label="预计时间">5-12 分钟</td>
+            <td data-label="预计距离">约 2-4 km</td>
+            <td data-label="备注">如果停车方便，华严寺到善化寺也可步行约 20-30 分钟。</td>
+          </tr>
+          <tr>
+            <td data-label="日期">周日早上</td>
+            <td data-label="自驾段">大同古城/酒店 → 应县木塔</td>
+            <td data-label="预计时间">75-90 分钟</td>
+            <td data-label="预计距离">约 75-85 km</td>
+            <td data-label="备注">高速为主，建议 8:00 前后出发。</td>
+          </tr>
+          <tr>
+            <td data-label="日期">周日中午</td>
+            <td data-label="自驾段">应县木塔 → 大同南站/还车点</td>
+            <td data-label="预计时间">80-100 分钟</td>
+            <td data-label="预计距离">约 85-95 km</td>
+            <td data-label="备注">最晚 12:30 左右离开应县，给 17:20 高铁留缓冲。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section" aria-labelledby="itinerary-title">
+      <div class="section-head">
+        <h2 id="itinerary-title">行程安排</h2>
+        <p>时间可按酒店位置、预约场次和当天日落时间微调，关键是周六上午锁定云冈，周日中午别拖晚。</p>
+      </div>
+      <div class="day-grid">
+        <article class="card">
+          <div class="day-title">
+            <h3>周六：云冈石窟 + 大同古城</h3>
+            <span class="tag">西线到古城</span>
+          </div>
+          <div class="timeline">
+            <div class="timeline-item">
+              <div class="time">08:00</div>
+              <div><h4>古城/酒店出发</h4><p>直奔云冈石窟，避开旅行团最密集时段。</p></div>
+            </div>
+            <div class="timeline-item">
+              <div class="time">08:50-12:00</div>
+              <div><h4>云冈石窟</h4><p>重点看第 5-6 窟、第 9-13 窟、第 16-20 窟；建议听讲解。</p></div>
+            </div>
+            <div class="timeline-item">
+              <div class="time">12:00-13:40</div>
+              <div><h4>午饭并返回古城</h4><p>午饭从简，回古城后找稳定停车点。</p></div>
+            </div>
+            <div class="timeline-item">
+              <div class="time">14:00-16:00</div>
+              <div><h4>华严寺</h4><p>把时间留给薄伽教藏殿、大雄宝殿和彩塑。</p></div>
+            </div>
+            <div class="timeline-item">
+              <div class="time">16:20-17:20</div>
+              <div><h4>善化寺</h4><p>节奏安静，适合作为古建主线的收束。</p></div>
+            </div>
+            <div class="timeline-item">
+              <div class="time">17:20-19:20</div>
+              <div><h4>东南邑 + 古城墙日落</h4><p>先逛东南邑街区，日落前 40 分钟登南城墙或东南角一带。</p></div>
+            </div>
+            <div class="timeline-item">
+              <div class="time">19:30 后</div>
+              <div><h4>古城晚饭</h4><p>山西菜、烧麦、刀削面或羊杂，不再跨城区开车。</p></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="day-title">
+            <h3>周日：应县木塔 + 从容返程</h3>
+            <span class="tag">南线返站</span>
+          </div>
+          <div class="timeline">
+            <div class="timeline-item">
+              <div class="time">07:30-08:00</div>
+              <div><h4>酒店出发</h4><p>不必极早起，但不要拖到 9 点以后再出城。</p></div>
+            </div>
+            <div class="timeline-item">
+              <div class="time">09:20-11:00</div>
+              <div><h4>应县木塔</h4><p>绕塔一周，看比例、斗拱、暗层结构和底层佛像。</p></div>
+            </div>
+            <div class="timeline-item">
+              <div class="time">11:00-12:15</div>
+              <div><h4>应县午饭</h4><p>凉粉、滴溜、羊杂、刀削面都适合；避免排长队。</p></div>
+            </div>
+            <div class="timeline-item">
+              <div class="time">12:15-14:00</div>
+              <div><h4>返回大同</h4><p>按正常路况可到大同南站或还车点周边。</p></div>
+            </div>
+            <div class="timeline-item">
+              <div class="time">14:00-15:20</div>
+              <div><h4>加油、还车、转场</h4><p>确认还车点是否在高铁站内，站外门店可能需要接驳。</p></div>
+            </div>
+            <div class="timeline-item">
+              <div class="time">15:20-17:20</div>
+              <div><h4>大同南站候车</h4><p>留出安检、取票、买水和临时排队的空间。</p></div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="spots-title">
+      <div class="section-head">
+        <h2 id="spots-title">景点简史与停留</h2>
+        <p>这趟行程的主线是北魏石窟、辽金古建与古城生活氛围，不把时间消耗在纯打卡点上。</p>
+      </div>
+      <div class="spots">
+        <article class="spot-card">
+          <h3>云冈石窟</h3>
+          <p>北魏皇家工程的代表，集中体现 5 世纪佛教造像艺术从雄浑西域风格到汉化审美的变化。昙曜五窟、五华洞和第 20 窟露天大佛最能抓住主线。</p>
+          <span class="stay">建议停留 3 小时</span>
+        </article>
+        <article class="spot-card">
+          <h3>华严寺</h3>
+          <p>辽金时期大同作为西京的重要遗存，寺内薄伽教藏殿保存辽代建筑和彩塑，大雄宝殿体量宏大，适合慢看木构、塑像和空间尺度。</p>
+          <span class="stay">建议停留 1.5-2 小时</span>
+        </article>
+        <article class="spot-card">
+          <h3>善化寺</h3>
+          <p>大同古城内保存格局完整的辽金寺院，山门、三圣殿和大雄宝殿形成清晰轴线。相比华严寺更安静克制，适合傍晚收尾。</p>
+          <span class="stay">建议停留 45-60 分钟</span>
+        </article>
+        <article class="spot-card">
+          <h3>东南邑</h3>
+          <p>位于大同古城东南角，是由历史街巷和传统院落更新而成的休闲街区，有咖啡、餐饮、文创和院落空间，适合傍晚散步。</p>
+          <span class="stay">建议停留 1-1.5 小时</span>
+        </article>
+        <article class="spot-card">
+          <h3>大同古城墙日落</h3>
+          <p>南城墙和东南角视野开阔，可看夕阳落在古城屋顶、城楼轮廓和街巷之上。日落后等一会儿亮灯，体验比单一机位更完整。</p>
+          <span class="stay">建议停留 60-90 分钟</span>
+        </article>
+        <article class="spot-card">
+          <h3>应县木塔</h3>
+          <p>辽代木构楼阁式佛塔，现存价值极高。参观重点不是登塔，而是整体比例、斗拱层次、暗层结构和塔内佛像。</p>
+          <span class="stay">建议停留 1.5 小时</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="tips-title">
+      <div class="section-head">
+        <h2 id="tips-title">出行提醒</h2>
+        <p>提前确认预约和开放情况，能把现场的不确定性降到最低。</p>
+      </div>
+      <div class="tips">
+        <div class="tip">
+          <h3>预约优先级</h3>
+          <p>云冈石窟最需要提前预约，尽量锁定周六 8:30-9:30 左右入园；应县木塔也建议提前查票。</p>
+        </div>
+        <div class="tip">
+          <h3>停车策略</h3>
+          <p>周六下午回到古城后尽量一次停车，华严寺、善化寺、东南邑和城墙以步行为主。</p>
+        </div>
+        <div class="tip">
+          <h3>返程底线</h3>
+          <p>周日最晚 12:30 左右离开应县，别把时间压给还车、接驳和高铁站安检。</p>
+        </div>
+      </div>
+    </section>
+
+    <p class="footer">注：行驶时间与距离为自驾规划估算，受酒店位置、停车点、路况和景区管制影响会有变化；景区开放范围和入园规则请以出行前官方公告为准。</p>
+  </main>
+
+  <script>
+    const points = [
+      { name: "大同古城", lat: 40.0903, lng: 113.3014, note: "住宿与周六晚间活动中心" },
+      { name: "云冈石窟", lat: 40.1090, lng: 113.1220, note: "周六上午重点，建议 3 小时" },
+      { name: "华严寺", lat: 40.0910, lng: 113.2964, note: "辽金古建和彩塑，建议 1.5-2 小时" },
+      { name: "善化寺", lat: 40.0833, lng: 113.3037, note: "安静完整的辽金寺院，建议 45-60 分钟" },
+      { name: "东南邑", lat: 40.0848, lng: 113.3120, note: "古城东南角街区，适合傍晚散步" },
+      { name: "古城墙日落", lat: 40.0789, lng: 113.3060, note: "南城墙或东南角，日落前 40 分钟上城" },
+      { name: "应县木塔", lat: 39.5597, lng: 113.1859, note: "周日上午重点，建议 1.5 小时" },
+      { name: "大同南站", lat: 40.0425, lng: 113.3580, note: "周日 17:20 高铁返京" }
+    ];
+
+    const saturdayDrive = [
+      [40.0903, 113.3014],
+      [40.1090, 113.1220],
+      [40.0910, 113.2964],
+      [40.0833, 113.3037],
+      [40.0848, 113.3120],
+      [40.0789, 113.3060]
+    ];
+
+    const sundayDrive = [
+      [40.0903, 113.3014],
+      [39.5597, 113.1859],
+      [40.0425, 113.3580]
+    ];
+
+    function showLeafletMap() {
+      const leafletEl = document.getElementById("leafletMap");
+      if (!leafletEl || !window.L) return;
+
+      const map = L.map("leafletMap", { scrollWheelZoom: false }).setView([39.94, 113.25], 9);
+      const tiles = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 18,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+      }).addTo(map);
+
+      tiles.once("load", () => {
+        leafletEl.classList.add("is-ready");
+        setTimeout(() => map.invalidateSize(), 60);
+      });
+
+      const icon = L.divIcon({
+        className: "custom-marker",
+        html: '<div style="width:18px;height:18px;border-radius:50%;background:#2d5c4d;border:3px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.25)"></div>',
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+        popupAnchor: [0, -8]
+      });
+
+      points.forEach((p) => {
+        L.marker([p.lat, p.lng], { icon })
+          .addTo(map)
+          .bindPopup(`<div class="popup-title">${p.name}</div><div>${p.note}</div>`);
+      });
+
+      L.polyline(saturdayDrive, {
+        color: "#2d5c4d",
+        weight: 4,
+        opacity: 0.85
+      }).addTo(map).bindPopup("周六：古城 - 云冈 - 华严寺 - 善化寺 - 东南邑 - 古城墙");
+
+      L.polyline(sundayDrive, {
+        color: "#b77b2d",
+        weight: 4,
+        opacity: 0.85,
+        dashArray: "8 8"
+      }).addTo(map).bindPopup("周日：大同古城 - 应县木塔 - 大同南站");
+
+      const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng]));
+      map.fitBounds(bounds, { padding: [28, 28] });
+
+      const legend = L.control({ position: "bottomleft" });
+      legend.onAdd = function () {
+        const div = L.DomUtil.create("div", "legend");
+        div.innerHTML = '<div><span style="background:#2d5c4d"></span>周六路线</div><div><span style="background:#b77b2d"></span>周日路线</div>';
+        return div;
+      };
+      legend.addTo(map);
+    }
+
+    showLeafletMap();
+  </script>
+</body>
+</html>
